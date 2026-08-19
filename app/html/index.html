@@ -93,6 +93,8 @@
 		<div class="row"><span class="label">Signal</span><span id="signal" class="value">-</span></div>
 		<div class="row"><span class="label">HTTP proxy</span><span id="proxy" class="value">-</span></div>
 		<div class="row"><span class="label">SOCKS5 proxy</span><span id="socks5" class="value">-</span></div>
+		<div class="row"><span class="label">Forwarded ports</span><span id="forward-ports" class="value">-</span></div>
+		<div class="row"><span class="label">Inbound SOCKS5</span><span id="inbound-socks5" class="value">-</span></div>
 		<div id="message"></div>
 	</section>
 	<section>
@@ -105,6 +107,10 @@
 		<input id="proxy-port" inputmode="numeric">
 		<label for="socks5-port">SOCKS5 proxy port</label>
 		<input id="socks5-port" inputmode="numeric">
+		<label for="forward-ports-input">Forwarded camera ports</label>
+		<input id="forward-ports-input" inputmode="numeric">
+		<label for="inbound-socks5-port">Inbound SOCKS5 port</label>
+		<input id="inbound-socks5-port" inputmode="numeric">
 		<button id="save">Save and reconnect</button>
 	</section>
 	<section>
@@ -177,6 +183,8 @@
 				if (name === group + 'ManagementURL') byId('management-url').value = value;
 				if (name === group + 'HTTPProxyPort') byId('proxy-port').value = value;
 				if (name === group + 'Socks5Port') byId('socks5-port').value = value;
+				if (name === group + 'ForwardPorts') byId('forward-ports-input').value = value;
+				if (name === group + 'InboundSocks5Port') byId('inbound-socks5-port').value = value;
 			}
 		}
 
@@ -197,6 +205,10 @@
 				byId('signal').textContent = status.signal_connected ? 'Connected' : 'Disconnected';
 				byId('proxy').textContent = status.proxy_address || '-';
 				byId('socks5').textContent = status.socks5_address || '-';
+				const overlayIP = (status.overlay_ip || '').split('/')[0];
+				const ports = status.forward_ports || [];
+				byId('forward-ports').textContent = ports.length ? (overlayIP ? ports.map(port => overlayIP + ':' + port).join(', ') : ports.join(', ')) : '-';
+				byId('inbound-socks5').textContent = status.inbound_socks5_address ? status.inbound_socks5_address.replace('overlay', overlayIP || 'overlay') : '-';
 				byId('message').textContent = status.error || '';
 			} catch (error) {
 				byId('status-banner').className = 'status-banner disconnected';
@@ -213,7 +225,9 @@
 				action: 'update',
 				[group + 'ManagementURL']: byId('management-url').value,
 				[group + 'HTTPProxyPort']: byId('proxy-port').value,
-				[group + 'Socks5Port']: byId('socks5-port').value
+				[group + 'Socks5Port']: byId('socks5-port').value,
+				[group + 'ForwardPorts']: byId('forward-ports-input').value,
+				[group + 'InboundSocks5Port']: byId('inbound-socks5-port').value
 			});
 			if (byId('setup-key').value) body.set(group + 'SetupKey', byId('setup-key').value);
 			byId('message').textContent = 'Saving...';

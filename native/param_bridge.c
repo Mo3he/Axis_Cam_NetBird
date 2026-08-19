@@ -23,6 +23,8 @@ static char *management_url;
 static char *setup_key;
 static char *http_proxy_port;
 static char *socks5_port;
+static char *forward_ports;
+static char *inbound_socks5_port;
 
 static void replace_value(char **target, const char *value) {
     free(*target);
@@ -70,6 +72,8 @@ static void load_configuration(void) {
     load_value("SetupKey", &setup_key);
     load_value("HTTPProxyPort", &http_proxy_port);
     load_value("Socks5Port", &socks5_port);
+    load_value("ForwardPorts", &forward_ports);
+    load_value("InboundSocks5Port", &inbound_socks5_port);
 }
 
 static void write_configuration(void) {
@@ -82,6 +86,8 @@ static void write_configuration(void) {
     write_shell_value(file, "SETUP_KEY", setup_key);
     write_shell_value(file, "HTTP_PROXY_PORT", value_or(http_proxy_port, "18080"));
     write_shell_value(file, "SOCKS5_PORT", value_or(socks5_port, "11080"));
+    write_shell_value(file, "FORWARD_PORTS", value_or(forward_ports, "80,443,554"));
+    write_shell_value(file, "INBOUND_SOCKS5_PORT", value_or(inbound_socks5_port, "1080"));
     fclose(file);
     chmod(CONFIG_FILE, 0600);
 }
@@ -139,6 +145,10 @@ static void parameter_changed(const gchar *name, const gchar *value,
         replace_value(&http_proxy_port, value);
     else if (strcmp(short_name, "Socks5Port") == 0)
         replace_value(&socks5_port, value);
+    else if (strcmp(short_name, "ForwardPorts") == 0)
+        replace_value(&forward_ports, value);
+    else if (strcmp(short_name, "InboundSocks5Port") == 0)
+        replace_value(&inbound_socks5_port, value);
     if (restart_timer)
         g_source_remove(restart_timer);
     restart_timer = g_timeout_add(300, restart_child, NULL);
@@ -193,12 +203,15 @@ int main(void) {
     }
 
     ensure_parameter("Socks5Port", "11080");
+    ensure_parameter("ForwardPorts", "80,443,554");
+    ensure_parameter("InboundSocks5Port", "1080");
     unlink(SETUP_KEY_SENTINEL);
     load_configuration();
     write_configuration();
     start_child();
 
-    const char *names[] = {"ManagementURL", "SetupKey", "HTTPProxyPort", "Socks5Port"};
+    const char *names[] = {"ManagementURL", "SetupKey", "HTTPProxyPort", "Socks5Port",
+                           "ForwardPorts", "InboundSocks5Port"};
     for (size_t index = 0; index < sizeof(names) / sizeof(names[0]); index++) {
         if (!ax_parameter_register_callback(parameter_handle, names[index],
                                              parameter_changed, NULL, &error) && error) {
@@ -220,6 +233,8 @@ int main(void) {
     free(setup_key);
     free(http_proxy_port);
     free(socks5_port);
+    free(forward_ports);
+    free(inbound_socks5_port);
     closelog();
     return 0;
 }

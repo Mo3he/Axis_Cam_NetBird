@@ -38,6 +38,8 @@ WireGuard support.
 - Joins NetBird Cloud or a self-hosted NetBird deployment with a setup key.
 - Runs the WireGuard overlay entirely inside the embedded userspace client.
 - Shows management, Signal, overlay IP, and proxy state in the camera UI.
+- Makes the camera reachable from the NetBird network on its overlay IP, with a
+  configurable list of forwarded ports and an inbound SOCKS5 proxy.
 - Exposes loopback HTTP CONNECT and SOCKS5 proxies for proxy-aware camera
   services.
 - Persists NetBird state under the ACAP package data directory.
@@ -77,6 +79,8 @@ settings page after saving. Use a one-use or limited setup key where possible.
 | Setup key | empty | Key used to register this camera |
 | HTTP proxy port | `18080` | Loopback HTTP CONNECT proxy port |
 | SOCKS5 proxy port | `11080` | Loopback SOCKS5 proxy port |
+| Forwarded camera ports | `80,443,554` | Comma-separated list, up to 16 ports, reachable on the NetBird IP |
+| Inbound SOCKS5 port | `1080` | SOCKS5 port on the NetBird IP for reaching any camera port |
 
 Settings are available in the app page and through the VAPIX parameter API:
 
@@ -90,6 +94,24 @@ and active proxy address. The status endpoint is available through the ACAP
 reverse proxy at `/local/NetBird_VPN/api/status`.
 
 ## Proxy and security
+
+Once connected, the camera is reachable from the NetBird network:
+
+| Service | Address | Purpose |
+|---|---|---|
+| Forwarded ports | `<netbird-ip>:80 / 443 / 554` | Camera web UI, HTTPS, and RTSP over the overlay |
+| Inbound SOCKS5 | `<netbird-ip>:1080` | Reach any camera port from the NetBird network |
+| Outbound HTTP CONNECT | `127.0.0.1:18080` | Camera -> NetBird for HTTP/HTTPS |
+| Outbound SOCKS5 | `127.0.0.1:11080` | Camera -> NetBird for SOCKS5-aware apps |
+
+```sh
+curl -k https://<netbird-ip>/       # camera web UI over the overlay
+# RTSP: rtsp://<netbird-ip>:554/...
+```
+
+> **Security:** the forwarded ports and the inbound SOCKS5 proxy are reachable by
+> any authorized peer in your NetBird network. Control access with NetBird access
+> policies and keep the camera behind its normal authentication.
 
 The HTTP CONNECT proxy binds to loopback only:
 

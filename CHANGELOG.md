@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.77.0
+
+- Updated the embedded NetBird client to v0.77.0.
+- Aligned the package version with the bundled NetBird release so new upstream
+  releases are built and published automatically.
+- Added inbound port forwarding so the camera is reachable on its NetBird IP,
+  with a configurable `ForwardPorts` list defaulting to `80,443,554`.
+- Added an inbound SOCKS5 proxy on the NetBird IP, port `1080` by default, for
+  reaching any camera port from the overlay.
+
 ## 0.1.2
 
 - Added a configurable loopback SOCKS5 proxy, default `127.0.0.1:11080`, with a
