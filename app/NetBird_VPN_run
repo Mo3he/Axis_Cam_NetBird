@@ -6,7 +6,7 @@ PARAMS="$STATE_DIR/params.conf"
 
 mkdir -p "$STATE_DIR"
 if [ -f "$PARAMS" ]; then
-    . "$PARAMS"
+	. "$PARAMS"
 fi
 
 export NB_SETUP_KEY="${SETUP_KEY:-}"
