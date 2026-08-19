@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "2.0.0",
+  "acapPackageConf": {
+    "setup": {
+      "appName": "NetBird_VPN",
+      "friendlyName": "NetBird VPN",
+      "vendor": "moshe@mohome.net",
+      "vendorId": "70ee172dd9",
+      "vendorUrl": "https://github.com/Mo3he/Axis_Cam_NetBird",
+      "version": "0.1.2",
+      "architecture": "BUILDARCH",
+      "runMode": "respawn",
+      "compatibleOsVersions": [{ "max": "13" }]
+    },
+    "configuration": {
+      "settingPage": "index.html",
+      "reverseProxy": [
+        {
+          "apiPath": "api",
+          "target": "http://localhost:2205/",
+          "access": "admin"
+        }
+      ],
+      "paramConfig": [
+        { "name": "ManagementURL", "default": "https://api.netbird.io:443", "type": "string" },
+        { "name": "SetupKey", "default": "", "type": "password" },
+        { "name": "HTTPProxyPort", "default": "18080", "type": "string" },
+        { "name": "Socks5Port", "default": "11080", "type": "string" }
+      ]
+    }
+  }
+}

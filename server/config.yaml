@@ -1,0 +1,15 @@
+server:
+  listenAddress: ":8080"
+  exposedAddress: "http://192.168.1.1:8080"
+  healthcheckAddress: ":9000"
+  metricsPort: 9090
+  logLevel: "info"
+  logFile: "console"
+  authSecret: "netbird-axis-lab-relay-secret"
+  dataDir: "/var/lib/netbird"
+  disableAnonymousMetrics: true
+  disableGeoliteUpdate: true
+  auth:
+    issuer: "http://192.168.1.1:8080/oauth2"
+  store:
+    engine: "sqlite"

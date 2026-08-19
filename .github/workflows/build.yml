@@ -1,0 +1,43 @@
+name: Build ACAP packages
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build aarch64 and armv7hf packages
+        run: ./build.sh
+
+      - name: Verify packages
+        run: |
+          for package in releases/*.eap; do
+            echo "== $package =="
+            tar tzf "$package"
+          done
+
+      - name: Run Go tests
+        run: go test ./...
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: netbird-acap-packages
+          path: releases/*.eap
+          if-no-files-found: error
+
+      - name: Attach release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: releases/*.eap

@@ -1,0 +1,18 @@
+services:
+  netbird-server:
+    image: netbirdio/netbird-server:latest
+    container_name: netbird-axis-server
+    restart: unless-stopped
+    environment:
+      NB_SETUP_PAT_ENABLED: "true"
+      NB_DISABLE_GEOLOCATION: "true"
+    ports:
+      - "192.168.1.1:8080:8080/tcp"
+      - "192.168.1.1:3478:3478/udp"
+    volumes:
+      - ./config.yaml:/etc/netbird/config.yaml:ro
+      - netbird_data:/var/lib/netbird
+    command: ["--config", "/etc/netbird/config.yaml"]
+
+volumes:
+  netbird_data:

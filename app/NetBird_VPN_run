@@ -1,0 +1,18 @@
+#!/bin/sh
+
+APP_DIR="/usr/local/packages/NetBird_VPN"
+STATE_DIR="$APP_DIR/localdata"
+PARAMS="$STATE_DIR/params.conf"
+
+mkdir -p "$STATE_DIR"
+if [ -f "$PARAMS" ]; then
+    . "$PARAMS"
+fi
+
+export NB_SETUP_KEY="${SETUP_KEY:-}"
+export NB_MANAGEMENT_URL="${MANAGEMENT_URL:-https://api.netbird.io:443}"
+export NB_HTTP_PROXY_PORT="${HTTP_PROXY_PORT:-18080}"
+export NB_SOCKS5_PORT="${SOCKS5_PORT:-11080}"
+export NB_STATE_DIR="$STATE_DIR"
+
+exec "$APP_DIR/lib/netbird"

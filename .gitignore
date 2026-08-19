@@ -1,0 +1,5 @@
+bin/
+*.eap
+localdata/
+.build/
+server/bootstrap-response.json
