@@ -1,7 +1,6 @@
 # NetBird ACAP for Axis Cameras
 
 [![Release](https://img.shields.io/github/v/release/Mo3he/Axis_Cam_NetBird?style=flat)](https://github.com/Mo3he/Axis_Cam_NetBird/releases)
-[![Downloads](https://img.shields.io/github/downloads/Mo3he/Axis_Cam_NetBird/total?label=Downloads&color=blue&style=flat)](https://github.com/Mo3he/Axis_Cam_NetBird/releases)
 [![Build](https://github.com/Mo3he/Axis_Cam_NetBird/actions/workflows/build.yml/badge.svg)](https://github.com/Mo3he/Axis_Cam_NetBird/actions/workflows/build.yml)
 [![License](https://img.shields.io/github/license/Mo3he/Axis_Cam_NetBird?style=flat)](LICENSE)
 [![Super-Linter](https://github.com/Mo3he/Axis_Cam_NetBird/actions/workflows/super-linter.yml/badge.svg)](https://github.com/Mo3he/Axis_Cam_NetBird/actions/workflows/super-linter.yml)
