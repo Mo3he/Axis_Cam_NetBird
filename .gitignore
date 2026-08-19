@@ -1,5 +1,6 @@
 bin/
 *.eap
 localdata/
+.DS_Store
 .build/
 server/bootstrap-response.json
