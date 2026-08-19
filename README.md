@@ -12,10 +12,11 @@ cameras. It uses NetBird's embedded client and userspace netstack mode, so it
 does not require root privileges, `/dev/net/tun`, `CAP_NET_ADMIN`, or kernel
 WireGuard support.
 
-> **Disclaimer:** This is not an official Axis Communications or NetBird
-> product. Use it at your own risk.
+> **Disclaimer:** Independent, community-developed ACAP package. Not an official
+> Axis product and not affiliated with, endorsed by, or supported by Axis
+> Communications AB or NetBird. Use at your own risk.
 
-> **NetBird notice:** NetBird is distributed under its upstream licenses. This
+> **NetBird Notice:** NetBird is distributed under its upstream licenses. This
 > repository is independent of and not endorsed by NetBird. See
 > [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
