@@ -18,8 +18,9 @@ if [ -z "$RUNTIME" ]; then
 	fi
 fi
 
-rm -rf "$REPO_ROOT/releases"
+# Remove previous unsigned output only; signed packages must survive a rebuild.
 mkdir -p "$REPO_ROOT/releases"
+find "$REPO_ROOT/releases" -maxdepth 1 -type f -name '*.eap' ! -name 'signed_*' -delete
 
 for arch in $ARCHES; do
 	tag="netbird-acap-${arch}"
