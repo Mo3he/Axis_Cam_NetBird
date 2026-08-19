@@ -7,7 +7,7 @@
       "vendor": "moshe@mohome.net",
       "vendorId": "70ee172dd9",
       "vendorUrl": "https://github.com/Mo3he/Axis_Cam_NetBird",
-      "version": "0.1.2",
+      "version": "0.77.0",
       "architecture": "BUILDARCH",
       "runMode": "respawn",
       "compatibleOsVersions": [{ "max": "13" }]

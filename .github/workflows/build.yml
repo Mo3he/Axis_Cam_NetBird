@@ -1,20 +1,118 @@
-name: Build ACAP packages
+name: Update and release NetBird ACAP
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
+  schedule:
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: netbird-release
+  cancel-in-progress: false
 
 jobs:
-  build:
+  update-and-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest NetBird version
+        id: netbird
+        run: |
+          tag=$(curl --fail --silent --show-error --location \
+            https://api.github.com/repos/netbirdio/netbird/releases/latest | jq -r '.tag_name')
+          version=${tag#v}
+
+          case "$version" in
+            ''|*[!0-9.]*)
+              echo "Unexpected NetBird release tag: $tag" >&2
+              exit 1
+              ;;
+          esac
+          esac
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check installed version
+        id: current
+        run: |
+          version=$(jq -r '.acapPackageConf.setup.version' app/manifest.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether an update is needed
+        id: update
+        run: |
+          if [ "${{ steps.current.outputs.version }}" = "${{ steps.netbird.outputs.version }}" ]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update NetBird dependency and package version
+        if: steps.update.outputs.needed == 'true'
+        env:
+          VERSION: ${{ steps.netbird.outputs.version }}
+        run: |
+          go get github.com/netbirdio/netbird@"v$VERSION"
+          go mod tidy
+          jq --arg version "$VERSION" \
+            '.acapPackageConf.setup.version = $version' app/manifest.json > manifest.json
+          mv manifest.json app/manifest.json
+
+      - name: Run Go tests
+        if: steps.update.outputs.needed == 'true'
+        run: go test ./...
+
+      - name: Build aarch64 and armv7hf packages
+        if: steps.update.outputs.needed == 'true'
+        run: ./build.sh
+
+      - name: Verify packages
+        if: steps.update.outputs.needed == 'true'
+        run: |
+          for package in releases/*.eap; do
+            echo "== $package =="
+            tar tzf "$package"
+          done
+
+      - name: Commit version update
+        if: steps.update.outputs.needed == 'true'
+        env:
+          VERSION: ${{ steps.netbird.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add go.mod go.sum app/manifest.json
+          git commit -m "Update NetBird to v$VERSION"
+          git push
+
+      - name: Create GitHub release
+        if: steps.update.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.netbird.outputs.version }}
+        run: |
+          gh release create "v$VERSION" releases/*.eap \
+            --title "NetBird VPN $VERSION" \
+            --generate-notes
+
+  build:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Go tests
+        run: go test ./...
 
       - name: Build aarch64 and armv7hf packages
         run: ./build.sh
@@ -25,9 +123,6 @@ jobs:
             echo "== $package =="
             tar tzf "$package"
           done
-
-      - name: Run Go tests
-        run: go test ./...
 
       - name: Upload packages
         uses: actions/upload-artifact@v4
