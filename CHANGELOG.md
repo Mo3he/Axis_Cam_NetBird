@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Fixed settings not loading or saving on devices without `/axis-cgi/param.cgi`,
+  such as recorder/NVR- and access-control-class devices.
+- Added a settings endpoint at `/local/NetBird_VPN/config/settings` that the
+  settings page falls back to when `param.cgi` is unavailable. It is served by
+  the parameter bridge so the setup key can be entered before enrollment.
+- Fixed the settings page showing a raw `Unexpected token '<'` JSON error before
+  a setup key is entered. It now reports `Not running` and prompts for a key.
+
 ## 0.77.0
 
 - Updated the embedded NetBird client to v0.77.0.

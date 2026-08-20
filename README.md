@@ -89,6 +89,22 @@ curl --digest -u admin:password \
   'https://camera/axis-cgi/param.cgi?action=list&group=root.NetBird_VPN'
 ```
 
+Devices that do not expose `param.cgi`, such as recorder/NVR- and
+access-control-class devices, are served by the app's own settings endpoint. The
+settings page falls back to it automatically, and it can also be used directly:
+
+```sh
+curl --anyauth -u admin:password \
+  'https://camera/local/NetBird_VPN/config/settings'
+
+curl --anyauth -u admin:password -X POST \
+  --data-urlencode 'ForwardPorts=80,443,554' \
+  'https://camera/local/NetBird_VPN/config/settings'
+```
+
+The setup key is write-only: it can be set through this endpoint but is never
+returned by it.
+
 The page reports the management and Signal state, assigned NetBird overlay IP,
 and active proxy address. The status endpoint is available through the ACAP
 reverse proxy at `/local/NetBird_VPN/api/status`.

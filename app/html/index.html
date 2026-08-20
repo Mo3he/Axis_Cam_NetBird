@@ -123,6 +123,12 @@
 	<div class="refresh-bar">Auto-refresh every 5 seconds</div>
 	<script>
 		const group = 'root.NetBird_VPN.';
+		const PARAM_URL = '/axis-cgi/param.cgi';
+		// param.cgi is used when available; recorder/NVR- and access-control-class
+		// devices do not expose it, so fall back to the app's own settings endpoint
+		// published through the manifest reverseProxy mapping.
+		const SETTINGS_URL = '/local/NetBird_VPN/config/settings';
+		const PARAM_NAMES = ['ManagementURL', 'HTTPProxyPort', 'Socks5Port', 'ForwardPorts', 'InboundSocks5Port'];
 		const byId = id => document.getElementById(id);
 		const root = document.documentElement;
 		const themeToggle = byId('theme-toggle');
@@ -173,67 +179,134 @@
 				.then(response => response.text()).then(renderLogs).catch(() => { logBox.textContent = 'Unable to load service logs.'; });
 		}
 
-		async function loadSettings() {
-			const text = await fetch('/axis-cgi/param.cgi?action=list&group=root.NetBird_VPN').then(r => r.text());
+		// Parse param.cgi "action=list" output. The _any flag distinguishes real
+		// param.cgi output from a generic 404/error page.
+		function parseParamText(text) {
+			const params = { _any: false };
 			for (const line of text.split('\n')) {
 				const separator = line.indexOf('=');
 				if (separator < 0) continue;
 				const name = line.slice(0, separator);
-				const value = line.slice(separator + 1);
-				if (name === group + 'ManagementURL') byId('management-url').value = value;
-				if (name === group + 'HTTPProxyPort') byId('proxy-port').value = value;
-				if (name === group + 'Socks5Port') byId('socks5-port').value = value;
-				if (name === group + 'ForwardPorts') byId('forward-ports-input').value = value;
-				if (name === group + 'InboundSocks5Port') byId('inbound-socks5-port').value = value;
+				if (!name.startsWith(group)) continue;
+				const short = name.slice(group.length);
+				if (!PARAM_NAMES.includes(short)) continue;
+				params[short] = line.slice(separator + 1).trim();
+				params._any = true;
+			}
+			return params;
+		}
+
+		async function getParams() {
+			try {
+				const response = await fetch(PARAM_URL + '?action=list&group=root.NetBird_VPN', { cache: 'no-store', credentials: 'same-origin' });
+				if (!response.ok) throw new Error('param.cgi unavailable');
+				const params = parseParamText(await response.text());
+				if (!params._any) throw new Error('param.cgi returned no parameters');
+				return params;
+			} catch (error) {
+				try {
+					const response = await fetch(SETTINGS_URL + '?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' });
+					return response.ok ? await response.json() : {};
+				} catch (fallbackError) {
+					return {};
+				}
 			}
 		}
 
+		// Save all settings. Falls back to the app endpoint only when param.cgi is
+		// unreachable, so a genuine rejection is still reported to the user.
+		async function saveParams(values) {
+			const cgiBody = new URLSearchParams({ action: 'update' });
+			const apiBody = new URLSearchParams();
+			for (const [name, value] of Object.entries(values)) {
+				cgiBody.set(group + name, value);
+				apiBody.set(name, value);
+			}
+			let cgiResponse = null;
+			try {
+				const response = await fetch(PARAM_URL, { method: 'POST', credentials: 'same-origin', body: cgiBody });
+				if (response.ok) cgiResponse = response;
+			} catch (error) {
+				cgiResponse = null;
+			}
+			if (cgiResponse) {
+				const text = (await cgiResponse.text()).trim();
+				if (/^OK/.test(text)) return;
+				throw new Error(text || 'Save failed');
+			}
+			const response = await fetch(SETTINGS_URL, { method: 'POST', credentials: 'same-origin', body: apiBody });
+			if (!response.ok) throw new Error('Save failed');
+		}
+
+		async function loadSettings() {
+			const params = await getParams();
+			if (typeof params.ManagementURL === 'string') byId('management-url').value = params.ManagementURL;
+			if (typeof params.HTTPProxyPort === 'string') byId('proxy-port').value = params.HTTPProxyPort;
+			if (typeof params.Socks5Port === 'string') byId('socks5-port').value = params.Socks5Port;
+			if (typeof params.ForwardPorts === 'string') byId('forward-ports-input').value = params.ForwardPorts;
+			if (typeof params.InboundSocks5Port === 'string') byId('inbound-socks5-port').value = params.InboundSocks5Port;
+		}
+
+		// The status API is served by the NetBird daemon, which does not run until a
+		// setup key is enrolled. Until then the reverse proxy returns an error page,
+		// so treat any non-JSON reply as "not running" rather than surfacing a
+		// JSON parse error.
 		async function loadStatus() {
+			let status = null;
 			try {
 				const response = await fetch('api/status', { cache: 'no-store' });
-				const status = await response.json();
-				const connected = byId('connected');
-				const state = status.connected ? 'connected' : (status.management_connected || status.signal_connected ? 'connecting' : 'disconnected');
-				const banner = byId('status-banner');
-				banner.className = 'status-banner ' + state;
-				byId('status-label').textContent = state === 'connected' ? 'Connected' : (state === 'connecting' ? 'Connecting...' : 'Stopped');
-				byId('status-time').textContent = new Date().toLocaleTimeString();
-				connected.textContent = status.connected ? 'Connected' : 'Disconnected';
-				connected.className = 'value ' + (status.connected ? 'connected' : 'offline');
-				byId('overlay').textContent = status.overlay_ip || '-';
-				byId('management').textContent = status.management_connected ? 'Connected' : 'Disconnected';
-				byId('signal').textContent = status.signal_connected ? 'Connected' : 'Disconnected';
-				byId('proxy').textContent = status.proxy_address || '-';
-				byId('socks5').textContent = status.socks5_address || '-';
-				const overlayIP = (status.overlay_ip || '').split('/')[0];
-				const ports = status.forward_ports || [];
-				byId('forward-ports').textContent = ports.length ? (overlayIP ? ports.map(port => overlayIP + ':' + port).join(', ') : ports.join(', ')) : '-';
-				byId('inbound-socks5').textContent = status.inbound_socks5_address ? status.inbound_socks5_address.replace('overlay', overlayIP || 'overlay') : '-';
-				byId('message').textContent = status.error || '';
+				const text = await response.text();
+				try {
+					status = JSON.parse(text);
+				} catch (parseError) {
+					status = null;
+				}
 			} catch (error) {
-				byId('status-banner').className = 'status-banner disconnected';
-				byId('status-label').textContent = 'Unavailable';
-				byId('status-time').textContent = new Date().toLocaleTimeString();
-				byId('connected').textContent = 'Unavailable';
-				byId('connected').className = 'value offline';
-				byId('message').textContent = error.message;
+				status = null;
 			}
+
+			byId('status-time').textContent = new Date().toLocaleTimeString();
+
+			if (!status) {
+				byId('status-banner').className = 'status-banner disconnected';
+				byId('status-label').textContent = 'Not running';
+				byId('connected').textContent = 'Not running';
+				byId('connected').className = 'value offline';
+				for (const id of ['overlay', 'management', 'signal', 'proxy', 'socks5', 'forward-ports', 'inbound-socks5']) byId(id).textContent = '-';
+				byId('message').textContent = 'Enter a setup key below and save to connect.';
+				return;
+			}
+
+			const connected = byId('connected');
+			const state = status.connected ? 'connected' : (status.management_connected || status.signal_connected ? 'connecting' : 'disconnected');
+			byId('status-banner').className = 'status-banner ' + state;
+			byId('status-label').textContent = state === 'connected' ? 'Connected' : (state === 'connecting' ? 'Connecting...' : 'Stopped');
+			connected.textContent = status.connected ? 'Connected' : 'Disconnected';
+			connected.className = 'value ' + (status.connected ? 'connected' : 'offline');
+			byId('overlay').textContent = status.overlay_ip || '-';
+			byId('management').textContent = status.management_connected ? 'Connected' : 'Disconnected';
+			byId('signal').textContent = status.signal_connected ? 'Connected' : 'Disconnected';
+			byId('proxy').textContent = status.proxy_address || '-';
+			byId('socks5').textContent = status.socks5_address || '-';
+			const overlayIP = (status.overlay_ip || '').split('/')[0];
+			const ports = status.forward_ports || [];
+			byId('forward-ports').textContent = ports.length ? (overlayIP ? ports.map(port => overlayIP + ':' + port).join(', ') : ports.join(', ')) : '-';
+			byId('inbound-socks5').textContent = status.inbound_socks5_address ? status.inbound_socks5_address.replace('overlay', overlayIP || 'overlay') : '-';
+			byId('message').textContent = status.error || '';
 		}
 
 		byId('save').addEventListener('click', async () => {
-			const body = new URLSearchParams({
-				action: 'update',
-				[group + 'ManagementURL']: byId('management-url').value,
-				[group + 'HTTPProxyPort']: byId('proxy-port').value,
-				[group + 'Socks5Port']: byId('socks5-port').value,
-				[group + 'ForwardPorts']: byId('forward-ports-input').value,
-				[group + 'InboundSocks5Port']: byId('inbound-socks5-port').value
-			});
-			if (byId('setup-key').value) body.set(group + 'SetupKey', byId('setup-key').value);
+			const values = {
+				ManagementURL: byId('management-url').value,
+				HTTPProxyPort: byId('proxy-port').value,
+				Socks5Port: byId('socks5-port').value,
+				ForwardPorts: byId('forward-ports-input').value,
+				InboundSocks5Port: byId('inbound-socks5-port').value
+			};
+			if (byId('setup-key').value) values.SetupKey = byId('setup-key').value;
 			byId('message').textContent = 'Saving...';
 			try {
-				const response = await fetch('/axis-cgi/param.cgi', { method: 'POST', body });
-				if (!response.ok) throw new Error('Save failed');
+				await saveParams(values);
 				byId('setup-key').value = '';
 				byId('message').textContent = 'Saved. Reconnecting...';
 				setTimeout(loadStatus, 1000);
