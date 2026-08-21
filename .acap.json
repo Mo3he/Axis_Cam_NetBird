@@ -1,0 +1,29 @@
+{
+  "app": "NetBird_VPN",
+  "friendlyName": "NetBird VPN",
+  "versionPolicy": "mirror",
+  "upstream": {
+    "type": "github-release",
+    "repo": "netbirdio/netbird",
+    "stripV": true,
+    "name": "NetBird",
+    "changesUrl": "https://github.com/netbirdio/netbird/releases/tag/v${UPSTREAM}"
+  },
+  "build": {
+    "command": "./build.sh",
+    "env": {}
+  },
+  "pins": [
+    {
+      "file": "go.mod",
+      "goModule": "github.com/netbirdio/netbird",
+      "prefix": "v"
+    }
+  ],
+  "signing": {
+    "skip": [
+      "*_acap3.eap",
+      "*_root.eap"
+    ]
+  }
+}
