@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.77.1 - 2026-08-22
+
+- Update to upstream 0.77.1.
+
 ## Unreleased
 
 - Fixed settings not loading or saving on devices without `/axis-cgi/param.cgi`,
