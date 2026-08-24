@@ -8,7 +8,10 @@ upstream components retain their own licenses.
 
 - Project: <https://github.com/netbirdio/netbird>
 - License: BSD 3-Clause for the client components used here.
-- Version: v0.74.3.
+- Version: pinned by the `github.com/netbirdio/netbird` require directive in
+  `go.mod`, which is rewritten automatically on every upstream bump. It is not
+  repeated here, so that this file cannot state a version the binary does not
+  contain.
 
 ## WireGuard userspace implementation
 
