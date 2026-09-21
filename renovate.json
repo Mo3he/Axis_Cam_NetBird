@@ -19,6 +19,12 @@
       "enabled": true,
       "groupName": "Go indirect dependencies",
       "groupSlug": "go-indirect-dependencies"
+    },
+    {
+      "description": "stun/v3 above v3.1.0 needs pion/transport/v4, but netbird's stdnet.Net implements the v3 interface. Park it until netbird moves to transport/v4.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/pion/stun/v3"],
+      "dependencyDashboardApproval": true
     }
   ]
 }
