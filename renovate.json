@@ -26,10 +26,16 @@
       "groupSlug": "go-indirect-dependencies"
     },
     {
-      "description": "stun/v3 above v3.1.0 needs pion/transport/v4, but netbird's stdnet.Net implements the v3 interface. Park it until netbird moves to transport/v4.",
+      "description": "netbird pins the pion stack to transport/v3. Any bump that drags in transport/v4 fails to compile: stun relay.go and ice gather.go both pass a transport/v3 Net where v4 is then expected. Let netbird drive these.",
       "matchManagers": ["gomod"],
-      "matchPackageNames": ["github.com/pion/stun/v3"],
+      "matchPackageNames": ["github.com/pion/**"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Renovate writes a bare commit hash instead of a pseudo-version into the circl replace directive, producing a go.mod Go refuses to parse.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["codeberg.org/cunicu/circl"],
+      "enabled": false
     },
     {
       "description": "gvisor is only go-gettable from its generated 'go' branch. Master pseudo-versions ship test files that collide with the package they sit in (found packages stack and bridge in pkg/tcpip/stack), so an automated bump always breaks the build.",
