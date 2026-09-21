@@ -25,6 +25,12 @@
       "matchManagers": ["gomod"],
       "matchPackageNames": ["github.com/pion/stun/v3"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "description": "gvisor is only go-gettable from its generated 'go' branch. Master pseudo-versions ship test files that collide with the package they sit in (found packages stack and bridge in pkg/tcpip/stack), so an automated bump always breaks the build.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["gvisor.dev/gvisor"],
+      "enabled": false
     }
   ]
 }
