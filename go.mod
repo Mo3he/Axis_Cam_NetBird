@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/netbirdio/netbird v0.79.0
-	github.com/things-go/go-socks5 v0.0.4
+	github.com/things-go/go-socks5 v0.1.3
 )
 
 require (
