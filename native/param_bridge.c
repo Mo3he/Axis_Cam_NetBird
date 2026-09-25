@@ -16,10 +16,8 @@
 #define CONFIG_FILE "/usr/local/packages/NetBird_VPN/localdata/params.conf"
 #define RUN_SCRIPT "/usr/local/packages/NetBird_VPN/NetBird_VPN_run"
 #define SETUP_KEY_SENTINEL "/usr/local/packages/NetBird_VPN/localdata/setup_key_clear"
-/* Loopback port for the settings fallback server. Must be unique per ACAP:
- * several of these VPN apps can run on one device and a shared port would make
- * one app's reverseProxy hit another app's server. Tailscale 2201,
- * ZeroTier 2202, NetBird status API 2205, NetBird settings 2206. */
+/* Must be unique per ACAP: VPN apps can share a device, and a shared port would
+ * make one app's reverseProxy hit another app's server. */
 #define SETTINGS_HTTP_PORT 2206
 
 static AXParameter *parameter_handle;
@@ -161,13 +159,8 @@ static void parameter_changed(const gchar *name, const gchar *value,
 }
 
 /* ── settings HTTP fallback (devices without param.cgi) ──────────────
- * Recorder/NVR- and access-control-class devices do not expose the legacy
- * /axis-cgi/param.cgi VAPIX endpoint, so the web UI cannot read or write
- * parameters through it. This tiny server, reached through the manifest
- * reverseProxy mapping at /local/NetBird_VPN/config/settings, exposes the same
- * parameters. It lives in the bridge rather than the Go daemon because the
- * daemon refuses to start until a setup key is enrolled, and the UI must be
- * able to write that key. */
+ * Reached via reverseProxy at /local/NetBird_VPN/config/settings. Lives here,
+ * not in the Go daemon, since the daemon won't start without a setup key. */
 
 static const char *settings_params[] = {"ManagementURL", "SetupKey", "HTTPProxyPort",
                                         "Socks5Port", "ForwardPorts", "InboundSocks5Port"};

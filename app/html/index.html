@@ -124,9 +124,7 @@
 	<script>
 		const group = 'root.NetBird_VPN.';
 		const PARAM_URL = '/axis-cgi/param.cgi';
-		// param.cgi is used when available; recorder/NVR- and access-control-class
-		// devices do not expose it, so fall back to the app's own settings endpoint
-		// published through the manifest reverseProxy mapping.
+		// Fallback for devices without param.cgi (recorders, access control).
 		const SETTINGS_URL = '/local/NetBird_VPN/config/settings';
 		const PARAM_NAMES = ['ManagementURL', 'HTTPProxyPort', 'Socks5Port', 'ForwardPorts', 'InboundSocks5Port'];
 		const byId = id => document.getElementById(id);
@@ -179,8 +177,7 @@
 				.then(response => response.text()).then(renderLogs).catch(() => { logBox.textContent = 'Unable to load service logs.'; });
 		}
 
-		// Parse param.cgi "action=list" output. The _any flag distinguishes real
-		// param.cgi output from a generic 404/error page.
+		// _any tells real param.cgi output apart from a generic 404/error page.
 		function parseParamText(text) {
 			const params = { _any: false };
 			for (const line of text.split('\n')) {
@@ -213,8 +210,7 @@
 			}
 		}
 
-		// Save all settings. Falls back to the app endpoint only when param.cgi is
-		// unreachable, so a genuine rejection is still reported to the user.
+		// Fall back only if param.cgi fails at the HTTP level, so its own rejections surface.
 		async function saveParams(values) {
 			const cgiBody = new URLSearchParams({ action: 'update' });
 			const apiBody = new URLSearchParams();
@@ -247,10 +243,8 @@
 			if (typeof params.InboundSocks5Port === 'string') byId('inbound-socks5-port').value = params.InboundSocks5Port;
 		}
 
-		// The status API is served by the NetBird daemon, which does not run until a
-		// setup key is enrolled. Until then the reverse proxy returns an error page,
-		// so treat any non-JSON reply as "not running" rather than surfacing a
-		// JSON parse error.
+		// The daemon serving this doesn't run until a setup key is enrolled, so a
+		// non-JSON reply (proxy error page) means "not running".
 		async function loadStatus() {
 			let status = null;
 			try {
