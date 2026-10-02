@@ -3,7 +3,7 @@ module github.com/Mo3he/Axis_Cam_NetBird
 go 1.26.0
 
 require (
-	github.com/netbirdio/netbird v0.79.0
+	github.com/netbirdio/netbird v0.80.0
 	github.com/things-go/go-socks5 v0.1.3
 )
 
@@ -55,7 +55,7 @@ require (
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/koron/go-ssdp v0.0.4 // indirect
 	github.com/kr/fs v0.1.0 // indirect
