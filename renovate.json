@@ -42,6 +42,19 @@
       "matchManagers": ["gomod"],
       "matchPackageNames": ["gvisor.dev/gvisor"],
       "enabled": false
+    },
+    {
+      "description": "The dex replace targets must match netbird's own go.mod. Renovate's v2 bump points the replace at netbirdio/dex/v2, whose module path is dexidp/dex/v2, so the build cannot resolve it.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["github.com/netbirdio/dex"],
+      "enabled": false
+    },
+    {
+      "description": "A major bump of an indirect module only adds an unused /vN line, since nothing imports the new path.",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
