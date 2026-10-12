@@ -44,9 +44,14 @@
       "enabled": false
     },
     {
-      "description": "The dex replace targets must match netbird's own go.mod. Renovate's v2 bump points the replace at netbirdio/dex/v2, whose module path is dexidp/dex/v2, so the build cannot resolve it.",
+      "description": "These replace targets must match netbird's own go.mod; copy them on each netbird bump. Renovate tracks the forks' newest commits, which netbird has not released with. Its dex v2 bump also points at netbirdio/dex/v2, whose module path is dexidp/dex/v2, so the build cannot resolve it.",
       "matchManagers": ["gomod"],
-      "matchPackageNames": ["github.com/netbirdio/dex"],
+      "matchPackageNames": [
+        "github.com/netbirdio/dex",
+        "github.com/netbirdio/dex/api/v2",
+        "github.com/netbirdio/ice/v4",
+        "github.com/netbirdio/wireguard-go"
+      ],
       "enabled": false
     },
     {
