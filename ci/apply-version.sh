@@ -52,8 +52,23 @@ for ((i = 0; i < pin_count; i++)); do
 	# A go.mod pin has no ARG to substitute, and go refuses a bare "0.77.1", so
 	# the declared prefix has to be applied here.
 	if [ -n "$gomodule" ]; then
-		(cd "$(dirname "$file")" && go get "${gomodule}@${prefix}${UPSTREAM:-$VERSION}" && go mod tidy)
-		echo "go module ${gomodule}@${prefix}${UPSTREAM:-$VERSION} -> $file"
+		ref="${gomodule}@${prefix}${UPSTREAM:-$VERSION}"
+		(
+			cd "$(dirname "$file")"
+			# Go ignores a dependency's replace directives, so mirror upstream's
+			# target for every module we already replace (e.g. its forks).
+			upstream_mod=$(go mod download -json "$ref" | jq -r .GoMod)
+			go mod edit -json "$upstream_mod" |
+				jq -r '.Replace[]? | select(.New.Version) | "\(.Old.Path)=\(.New.Path)@\(.New.Version)"' |
+				while IFS= read -r rep; do
+					if go mod edit -json | jq -e --arg p "${rep%%=*}" '.Replace[]? | select(.Old.Path == $p)' >/dev/null; then
+						go mod edit -replace "$rep"
+						echo "replace $rep -> $file"
+					fi
+				done
+			go get "$ref" && go mod tidy
+		)
+		echo "go module $ref -> $file"
 		continue
 	fi
 
