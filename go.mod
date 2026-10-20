@@ -3,7 +3,7 @@ module github.com/Mo3he/Axis_Cam_NetBird
 go 1.26.0
 
 require (
-	github.com/netbirdio/netbird v0.81.2
+	github.com/netbirdio/netbird v0.81.3
 	github.com/things-go/go-socks5 v0.1.3
 )
 
@@ -94,7 +94,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
-	github.com/quic-go/quic-go v0.62.0 // indirect
+	github.com/quic-go/quic-go v0.64.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.8 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
