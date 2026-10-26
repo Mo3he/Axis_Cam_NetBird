@@ -3,6 +3,9 @@
 ## 0.81.4 - 2026-10-26
 
 - Update to upstream 0.81.4.
+- Rebuilt with Go 1.27.3 and newer golang.org/x/net and golang.org/x/crypto,
+  fixing reachable vulnerabilities (GO-2026-6809, GO-2026-6603, GO-2026-6610,
+  GO-2026-6611, GO-2026-6612, GO-2026-6617, GO-2026-6354, GO-2026-6355).
 
 ## 0.81.3 - 2026-10-20
 
