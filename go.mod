@@ -3,7 +3,7 @@ module github.com/Mo3he/Axis_Cam_NetBird
 go 1.26.0
 
 require (
-	github.com/netbirdio/netbird v0.81.4
+	github.com/netbirdio/netbird v0.81.5
 	github.com/things-go/go-socks5 v0.1.3
 )
 
@@ -37,7 +37,7 @@ require (
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/gliderlabs/ssh v0.3.8 // indirect
+	github.com/gliderlabs/ssh v0.3.9-0.20250127223818-909fa952d4e4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
