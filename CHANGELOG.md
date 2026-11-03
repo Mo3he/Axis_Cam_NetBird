@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+- Add routing peer support: the camera can serve NetBird Network Routes,
+  Networks resources, and exit-node routes assigned to it in the dashboard
+  (`RoutingMode`: `off`, `internet`, or `full`).
+- Add `AcceptRoutes` so the outbound proxies can use routes and exit nodes from
+  other peers.
+- Show served routes, routes via peers, and the exit node in use on the
+  settings page and in the status API.
+- Both outbound proxies now resolve host names through NetBird DNS first, so
+  the SOCKS5 proxy reaches NetBird peer names. With `AcceptRoutes`, names
+  NetBird DNS cannot resolve fall back to the camera's system DNS, so public
+  names work through an exit node on accounts without a nameserver group.
+- Time out proxy connections that no peer can carry after 30 seconds instead
+  of waiting for TCP to give up.
+
 ## 0.82.0 - 2026-10-30
 
 - Update to upstream 0.82.0.
@@ -47,7 +63,7 @@
 
 - Update to upstream 0.77.1.
 
-## Unreleased
+## 0.77.0
 
 - Fixed settings not loading or saving on devices without `/axis-cgi/param.cgi`,
   such as recorder/NVR- and access-control-class devices.
@@ -56,9 +72,6 @@
   the parameter bridge so the setup key can be entered before enrollment.
 - Fixed the settings page showing a raw `Unexpected token '<'` JSON error before
   a setup key is entered. It now reports `Not running` and prompts for a key.
-
-## 0.77.0
-
 - Updated the embedded NetBird client to v0.77.0.
 - Aligned the package version with the bundled NetBird release so new upstream
   releases are built and published automatically.

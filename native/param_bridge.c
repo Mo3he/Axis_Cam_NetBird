@@ -29,6 +29,8 @@ static char *http_proxy_port;
 static char *socks5_port;
 static char *forward_ports;
 static char *inbound_socks5_port;
+static char *routing_mode;
+static char *accept_routes;
 
 static void replace_value(char **target, const char *value) {
     free(*target);
@@ -78,6 +80,8 @@ static void load_configuration(void) {
     load_value("Socks5Port", &socks5_port);
     load_value("ForwardPorts", &forward_ports);
     load_value("InboundSocks5Port", &inbound_socks5_port);
+    load_value("RoutingMode", &routing_mode);
+    load_value("AcceptRoutes", &accept_routes);
 }
 
 static void write_configuration(void) {
@@ -92,6 +96,8 @@ static void write_configuration(void) {
     write_shell_value(file, "SOCKS5_PORT", value_or(socks5_port, "11080"));
     write_shell_value(file, "FORWARD_PORTS", value_or(forward_ports, "80,443,554"));
     write_shell_value(file, "INBOUND_SOCKS5_PORT", value_or(inbound_socks5_port, "1080"));
+    write_shell_value(file, "ROUTING_MODE", value_or(routing_mode, "off"));
+    write_shell_value(file, "ACCEPT_ROUTES", value_or(accept_routes, "no"));
     fclose(file);
     chmod(CONFIG_FILE, 0600);
 }
@@ -153,6 +159,10 @@ static void parameter_changed(const gchar *name, const gchar *value,
         replace_value(&forward_ports, value);
     else if (strcmp(short_name, "InboundSocks5Port") == 0)
         replace_value(&inbound_socks5_port, value);
+    else if (strcmp(short_name, "RoutingMode") == 0)
+        replace_value(&routing_mode, value);
+    else if (strcmp(short_name, "AcceptRoutes") == 0)
+        replace_value(&accept_routes, value);
     if (restart_timer)
         g_source_remove(restart_timer);
     restart_timer = g_timeout_add(300, restart_child, NULL);
@@ -163,7 +173,8 @@ static void parameter_changed(const gchar *name, const gchar *value,
  * not in the Go daemon, since the daemon won't start without a setup key. */
 
 static const char *settings_params[] = {"ManagementURL", "SetupKey", "HTTPProxyPort",
-                                        "Socks5Port", "ForwardPorts", "InboundSocks5Port"};
+                                        "Socks5Port", "ForwardPorts", "InboundSocks5Port",
+                                        "RoutingMode", "AcceptRoutes"};
 
 static int settings_is_known(const char *name) {
     for (size_t index = 0; index < G_N_ELEMENTS(settings_params); index++)
@@ -460,13 +471,15 @@ int main(void) {
     ensure_parameter("Socks5Port", "11080");
     ensure_parameter("ForwardPorts", "80,443,554");
     ensure_parameter("InboundSocks5Port", "1080");
+    ensure_parameter("RoutingMode", "off");
+    ensure_parameter("AcceptRoutes", "no");
     unlink(SETUP_KEY_SENTINEL);
     load_configuration();
     write_configuration();
     start_child();
 
     const char *names[] = {"ManagementURL", "SetupKey", "HTTPProxyPort", "Socks5Port",
-                           "ForwardPorts", "InboundSocks5Port"};
+                           "ForwardPorts", "InboundSocks5Port", "RoutingMode", "AcceptRoutes"};
     for (size_t index = 0; index < sizeof(names) / sizeof(names[0]); index++) {
         if (!ax_parameter_register_callback(parameter_handle, names[index],
                                              parameter_changed, NULL, &error) && error) {
@@ -492,6 +505,8 @@ int main(void) {
     free(socks5_port);
     free(forward_ports);
     free(inbound_socks5_port);
+    free(routing_mode);
+    free(accept_routes);
     closelog();
     return 0;
 }

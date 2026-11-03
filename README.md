@@ -27,6 +27,7 @@ WireGuard support.
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Proxy and security](#proxy-and-security)
+- [Network routes and exit nodes](#network-routes-and-exit-nodes)
 - [Local self-hosted test server](#local-self-hosted-test-server)
 - [Build from source](#build-from-source)
 - [Known limitations](#known-limitations)
@@ -42,6 +43,9 @@ WireGuard support.
   configurable list of forwarded ports and an inbound SOCKS5 proxy.
 - Exposes loopback HTTP CONNECT and SOCKS5 proxies for proxy-aware camera
   services.
+- Can act as a NetBird routing peer, serving Network Routes, Networks resources,
+  and exit-node routes assigned to the camera in the dashboard.
+- Can use routes and exit nodes from other peers for its outbound proxies.
 - Persists NetBird state under the ACAP package data directory.
 
 ## Compatibility
@@ -81,6 +85,8 @@ settings page after saving. Use a one-use or limited setup key where possible.
 | SOCKS5 proxy port | `11080` | Loopback SOCKS5 proxy port |
 | Forwarded camera ports | `80,443,554` | Comma-separated list, up to 16 ports, reachable on the NetBird IP |
 | Inbound SOCKS5 port | `1080` | SOCKS5 port on the NetBird IP for reaching any camera port |
+| Routing peer (`RoutingMode`) | `off` | `off`, `internet` (serve routes, but not to the camera's own subnets), or `full` (serve routes including the camera's own subnets) |
+| Accept peer routes (`AcceptRoutes`) | `no` | `yes` lets the outbound proxies use routes and exit nodes from other peers |
 
 Settings are available in the app page and through the VAPIX parameter API:
 
@@ -144,6 +150,74 @@ The camera operating system is not transparently routed through the overlay in
 userspace mode; applications must use a proxy or the embedded NetBird
 networking API.
 
+## Network routes and exit nodes
+
+NetBird routes are assigned centrally in the NetBird dashboard; the camera only
+decides whether it is willing to serve or use them. Both features are off by
+default. Changes take effect after the app reconnects.
+
+### Camera as a routing peer
+
+Set **Routing peer** to let this camera forward traffic for other peers:
+
+| Mode | Behavior |
+|---|---|
+| `off` | The camera serves no routes (default) |
+| `internet` | Serves assigned routes, but drops traffic to the subnets the camera is directly attached to, such as its LAN. Use for an exit node that must not expose the camera's own network |
+| `full` | Serves assigned routes, including the camera's own subnets |
+
+`internet` only blocks the subnets on the camera's interfaces when the app
+starts. Other private networks the camera can reach through its gateway, and
+link-local addresses (`169.254.0.0/16`), are still reachable through an exit
+node. Use NetBird access policies to control what peers may reach.
+
+Then, in the NetBird dashboard:
+
+- **Network Routes / Networks:** add a route or resource (for example
+  `192.168.1.0/24`) with this camera as the routing peer. Requires `full` when
+  the route covers the camera's own subnet.
+- **Exit node:** add a `0.0.0.0/0` route with this camera as the routing peer,
+  or use the peer's **Set up exit node** action.
+- Add an access policy that allows the client peers to reach the route or
+  resource.
+
+Routed traffic is forwarded in userspace: the camera terminates each TCP/UDP
+flow from the overlay and opens a matching connection from its own network
+stack, so other LAN hosts see traffic from the camera's LAN address. No root
+privileges, kernel forwarding, or NAT rules are required. ICMP (ping) through
+the route needs raw-socket access, which the ACAP does not have, so use TCP or
+UDP to test reachability. Throughput is limited by the camera's CPU.
+
+> **Security:** a routing peer makes every destination its routes cover
+> reachable from the peers your NetBird policies allow, using the camera's
+> network access. `full` adds the camera's own LAN. Scope routes and policies
+> tightly, and prefer `internet` for exit-node-only use.
+
+The Routing section of the settings page lists the routes this camera currently
+serves.
+
+### Using routes and exit nodes from other peers
+
+Set **Accept peer routes** to `yes` so traffic sent through the camera's
+outbound HTTP CONNECT and SOCKS5 proxies can reach networks behind other
+routing peers. If an exit node is distributed to this camera's group, Internet
+destinations requested through the proxies leave through that exit node.
+
+Exit nodes are used only when the route has auto-apply enabled in the
+dashboard; the embedded client has no way to select an exit node manually.
+
+Both proxies resolve host names through NetBird DNS first, so peer names
+(`*.netbird.cloud`) and names from nameserver groups work. With **Accept peer
+routes** enabled, a name NetBird DNS cannot resolve, for example a public name
+on an account without a nameserver group, is resolved with the camera's system
+DNS and the connection still goes through the overlay. A connection that no
+peer route covers times out after 30 seconds. The overlay is IPv4-only, so with client-side
+resolution (`socks5://` rather than `socks5h://`) make sure the client picks an
+IPv4 address, for example `curl -4`.
+This does not change how the camera operating system routes its own traffic;
+only connections made through the NetBird proxies use the overlay. The settings
+page shows the exit node in use and the routes available through peers.
+
 ## Local self-hosted test server
 
 The `server/` directory contains a LAN-only development stack for testing with
@@ -186,6 +260,11 @@ go test ./...
 
 - ARMv7hf needs hardware verification.
 - Userspace mode does not install a kernel interface or system-wide routes.
+- Serving routes relies on overriding the embedded client's built-in
+  `DisableServerRoutes` setting, which the upstream embedding API does not
+  expose. If an upstream update changes this, the app logs
+  `routing peer unavailable` and continues without serving routes.
+- ICMP is not forwarded for served routes.
 - SOCKS5 and HTTP proxy traffic must target a reachable NetBird peer; the local
   server's ordinary LAN address is blocked by the camera's `BlockLANAccess`
   policy.

@@ -43,7 +43,9 @@
 		.connected { color: var(--green); font-weight: 600; }
 		.offline { color: var(--red); font-weight: 600; }
 		label { display: block; margin: 12px 0 5px; color: var(--muted); }
-		input { width: 100%; box-sizing: border-box; padding: 9px; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+		input, select { width: 100%; box-sizing: border-box; padding: 9px; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+		.hint { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+		.route-list { white-space: pre-line; }
 		button { margin-top: 14px; padding: 9px 15px; border: 0; border-radius: 6px; color: #fff; background: var(--accent); cursor: pointer; font: inherit; }
 		#message { min-height: 1.3em; margin-top: 10px; color: var(--muted); }
 		.status-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 14px; border-radius: 8px; }
@@ -97,6 +99,14 @@
 		<div class="row"><span class="label">Inbound SOCKS5</span><span id="inbound-socks5" class="value">-</span></div>
 		<div id="message"></div>
 	</section>
+	<section aria-live="polite">
+		<h2>Routing</h2>
+		<div class="row"><span class="label">Routing peer</span><span id="routing-mode" class="value">-</span></div>
+		<div class="row"><span class="label">Served routes</span><span id="served-routes" class="value route-list">-</span></div>
+		<div class="row"><span class="label">Accept peer routes</span><span id="accept-routes" class="value">-</span></div>
+		<div class="row"><span class="label">Exit node in use</span><span id="exit-node" class="value">-</span></div>
+		<div class="row"><span class="label">Routes via peers</span><span id="peer-routes" class="value route-list">-</span></div>
+	</section>
 	<section>
 		<h2>Settings</h2>
 		<label for="management-url">Management URL</label>
@@ -111,6 +121,19 @@
 		<input id="forward-ports-input" inputmode="numeric">
 		<label for="inbound-socks5-port">Inbound SOCKS5 port</label>
 		<input id="inbound-socks5-port" inputmode="numeric">
+		<label for="routing-mode-input">Routing peer</label>
+		<select id="routing-mode-input">
+			<option value="off">Off</option>
+			<option value="internet">On, except the camera's own subnets</option>
+			<option value="full">On, including the camera's own subnets</option>
+		</select>
+		<p class="hint">Serve the Network Routes, Networks resources or exit node assigned to this camera in the NetBird dashboard.</p>
+		<label for="accept-routes-input">Accept peer routes and exit nodes</label>
+		<select id="accept-routes-input">
+			<option value="no">No</option>
+			<option value="yes">Yes</option>
+		</select>
+		<p class="hint">Let the camera's outbound proxies reach networks behind other routing peers and use an exit node.</p>
 		<button id="save">Save and reconnect</button>
 	</section>
 	<section>
@@ -126,7 +149,8 @@
 		const PARAM_URL = '/axis-cgi/param.cgi';
 		// Fallback for devices without param.cgi (recorders, access control).
 		const SETTINGS_URL = '/local/NetBird_VPN/config/settings';
-		const PARAM_NAMES = ['ManagementURL', 'HTTPProxyPort', 'Socks5Port', 'ForwardPorts', 'InboundSocks5Port'];
+		const PARAM_NAMES = ['ManagementURL', 'HTTPProxyPort', 'Socks5Port', 'ForwardPorts', 'InboundSocks5Port', 'RoutingMode', 'AcceptRoutes'];
+		const ROUTING_LABELS = { off: 'Off', internet: 'On, except own subnets', full: 'On, including own subnets' };
 		const byId = id => document.getElementById(id);
 		const root = document.documentElement;
 		const themeToggle = byId('theme-toggle');
@@ -241,6 +265,8 @@
 			if (typeof params.Socks5Port === 'string') byId('socks5-port').value = params.Socks5Port;
 			if (typeof params.ForwardPorts === 'string') byId('forward-ports-input').value = params.ForwardPorts;
 			if (typeof params.InboundSocks5Port === 'string') byId('inbound-socks5-port').value = params.InboundSocks5Port;
+			if (typeof params.RoutingMode === 'string') byId('routing-mode-input').value = ROUTING_LABELS[params.RoutingMode.trim().toLowerCase()] ? params.RoutingMode.trim().toLowerCase() : 'off';
+			if (typeof params.AcceptRoutes === 'string') byId('accept-routes-input').value = /^(yes|true|1|on)$/i.test(params.AcceptRoutes.trim()) ? 'yes' : 'no';
 		}
 
 		// The daemon serving this doesn't run until a setup key is enrolled, so a
@@ -266,7 +292,7 @@
 				byId('status-label').textContent = 'Not running';
 				byId('connected').textContent = 'Not running';
 				byId('connected').className = 'value offline';
-				for (const id of ['overlay', 'management', 'signal', 'proxy', 'socks5', 'forward-ports', 'inbound-socks5']) byId(id).textContent = '-';
+				for (const id of ['overlay', 'management', 'signal', 'proxy', 'socks5', 'forward-ports', 'inbound-socks5', 'routing-mode', 'served-routes', 'accept-routes', 'exit-node', 'peer-routes']) byId(id).textContent = '-';
 				byId('message').textContent = 'Enter a setup key below and save to connect.';
 				return;
 			}
@@ -287,6 +313,14 @@
 			byId('forward-ports').textContent = ports.length ? (overlayIP ? ports.map(port => overlayIP + ':' + port).join(', ') : ports.join(', ')) : '-';
 			byId('inbound-socks5').textContent = status.inbound_socks5_address ? status.inbound_socks5_address.replace('overlay', overlayIP || 'overlay') : '-';
 			byId('message').textContent = status.error || '';
+
+			const servedRoutes = status.served_routes || [];
+			const peerRoutes = status.peer_routes || [];
+			byId('routing-mode').textContent = ROUTING_LABELS[status.routing_mode] || 'Off';
+			byId('served-routes').textContent = status.routing_mode && status.routing_mode !== 'off' ? (servedRoutes.length ? servedRoutes.join('\n') : 'None assigned') : '-';
+			byId('accept-routes').textContent = status.accept_routes ? 'Yes' : 'No';
+			byId('exit-node').textContent = status.exit_node || (status.accept_routes ? 'None' : '-');
+			byId('peer-routes').textContent = status.accept_routes ? (peerRoutes.length ? peerRoutes.map(route => route.network + ' via ' + route.peer).join('\n') : 'None') : '-';
 		}
 
 		byId('save').addEventListener('click', async () => {
@@ -295,7 +329,9 @@
 				HTTPProxyPort: byId('proxy-port').value,
 				Socks5Port: byId('socks5-port').value,
 				ForwardPorts: byId('forward-ports-input').value,
-				InboundSocks5Port: byId('inbound-socks5-port').value
+				InboundSocks5Port: byId('inbound-socks5-port').value,
+				RoutingMode: byId('routing-mode-input').value,
+				AcceptRoutes: byId('accept-routes-input').value
 			};
 			if (byId('setup-key').value) values.SetupKey = byId('setup-key').value;
 			byId('message').textContent = 'Saving...';

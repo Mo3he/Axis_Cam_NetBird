@@ -54,22 +54,37 @@ func main() {
 		log.Fatal("NB_SETUP_KEY is required for first enrollment")
 	}
 
+	routingMode := parseRoutingMode(os.Getenv("NB_ROUTING_MODE"))
+	acceptRoutes := parseBool(os.Getenv("NB_ACCEPT_ROUTES"))
+
 	client, err := netbird.New(netbird.Options{
-		DeviceName:          hostname(),
-		SetupKey:            setupKey,
-		PrivateKey:          privateKey,
-		ManagementURL:       managementURL,
-		ConfigPath:          stateDir + "/config.json",
-		StatePath:           stateDir + "/state.json",
-		LogOutput:           os.Stderr,
-		LogLevel:            "info",
-		BlockInbound:        false,
-		BlockLANAccess:      true,
-		DisableClientRoutes: true,
+		DeviceName:    hostname(),
+		SetupKey:      setupKey,
+		PrivateKey:    privateKey,
+		ManagementURL: managementURL,
+		ConfigPath:    stateDir + "/config.json",
+		StatePath:     stateDir + "/state.json",
+		LogOutput:     os.Stderr,
+		LogLevel:      "info",
+		BlockInbound:  false,
+		// Drops routed traffic to the camera's directly attached subnets.
+		BlockLANAccess:      routingMode != routingFull,
+		DisableClientRoutes: !acceptRoutes,
 		DisableIPv6:         true,
 	})
 	if err != nil {
 		log.Fatalf("create NetBird client: %v", err)
+	}
+	if routingMode != routingOff {
+		if err := enableServerRoutes(client); err != nil {
+			log.Printf("routing peer unavailable, serving no routes: %v", err)
+			routingMode = routingOff
+		} else {
+			log.Printf("routing peer enabled (mode %s)", routingMode)
+		}
+	}
+	if acceptRoutes {
+		log.Printf("accepting routes and exit nodes from other peers")
 	}
 
 	startCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -87,7 +102,8 @@ func main() {
 	if httpPort == "" {
 		httpPort = defaultHTTPPort
 	}
-	proxy := &httpProxy{client: client}
+	dialer := newOverlayDialer(client.DialContext, acceptRoutes)
+	proxy := &httpProxy{dial: dialer.DialContext}
 	server := &http.Server{Addr: "127.0.0.1:" + httpPort, Handler: proxy}
 	go func() {
 		log.Printf("HTTP CONNECT proxy listening on 127.0.0.1:%s", httpPort)
@@ -103,7 +119,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("SOCKS5 proxy: %v", err)
 	}
-	socksServer := socks5.NewServer(socks5.WithDial(client.DialContext))
+	socksServer := socks5.NewServer(
+		socks5.WithDial(dialer.DialContext),
+		socks5.WithResolver(passthroughResolver{}),
+	)
 	go func() {
 		log.Printf("SOCKS5 proxy listening on 127.0.0.1:%s", socksPort)
 		if err := socksServer.Serve(socksListener); err != nil {
@@ -149,6 +168,8 @@ func main() {
 		Socks5Address:       "127.0.0.1:" + socksPort,
 		ForwardPorts:        forwardedPorts,
 		InboundSocksAddress: inboundSocksAddress,
+		RoutingMode:         routingMode,
+		AcceptRoutes:        acceptRoutes,
 	}
 	statusServer := &http.Server{
 		Addr: statusAddress,
@@ -251,26 +272,37 @@ type runtimeInfo struct {
 	Socks5Address       string
 	ForwardPorts        []string
 	InboundSocksAddress string
+	RoutingMode         string
+	AcceptRoutes        bool
 }
 
 func writeStatus(writer http.ResponseWriter, client *netbird.Client, runtime runtimeInfo) {
 	status, err := client.Status()
 	response := struct {
-		Connected           bool     `json:"connected"`
-		ManagementConnected bool     `json:"management_connected"`
-		SignalConnected     bool     `json:"signal_connected"`
-		OverlayIP           string   `json:"overlay_ip"`
-		ManagementURL       string   `json:"management_url"`
-		ProxyAddress        string   `json:"proxy_address"`
-		Socks5Address       string   `json:"socks5_address"`
-		ForwardPorts        []string `json:"forward_ports"`
-		InboundSocks5Port   string   `json:"inbound_socks5_address,omitempty"`
-		Error               string   `json:"error,omitempty"`
+		Connected           bool        `json:"connected"`
+		ManagementConnected bool        `json:"management_connected"`
+		SignalConnected     bool        `json:"signal_connected"`
+		OverlayIP           string      `json:"overlay_ip"`
+		ManagementURL       string      `json:"management_url"`
+		ProxyAddress        string      `json:"proxy_address"`
+		Socks5Address       string      `json:"socks5_address"`
+		ForwardPorts        []string    `json:"forward_ports"`
+		InboundSocks5Port   string      `json:"inbound_socks5_address,omitempty"`
+		RoutingMode         string      `json:"routing_mode"`
+		AcceptRoutes        bool        `json:"accept_routes"`
+		ServedRoutes        []string    `json:"served_routes"`
+		PeerRoutes          []peerRoute `json:"peer_routes"`
+		ExitNode            string      `json:"exit_node,omitempty"`
+		Error               string      `json:"error,omitempty"`
 	}{
 		ProxyAddress:      runtime.ProxyAddress,
 		Socks5Address:     runtime.Socks5Address,
 		ForwardPorts:      runtime.ForwardPorts,
 		InboundSocks5Port: runtime.InboundSocksAddress,
+		RoutingMode:       runtime.RoutingMode,
+		AcceptRoutes:      runtime.AcceptRoutes,
+		ServedRoutes:      []string{},
+		PeerRoutes:        []peerRoute{},
 	}
 	if err != nil {
 		response.Error = err.Error()
@@ -280,6 +312,18 @@ func writeStatus(writer http.ResponseWriter, client *netbird.Client, runtime run
 		response.Connected = response.ManagementConnected && response.SignalConnected
 		response.OverlayIP = status.LocalPeerState.IP
 		response.ManagementURL = status.ManagementState.URL
+		peers := make([]remotePeer, 0, len(status.Peers))
+		for _, state := range status.Peers {
+			if state.Mux == nil {
+				continue // offline peers carry no lock and serve no routes
+			}
+			name := strings.TrimSuffix(state.FQDN, ".")
+			if name == "" {
+				name = state.IP
+			}
+			peers = append(peers, remotePeer{Name: name, Routes: state.GetRoutes()})
+		}
+		response.ServedRoutes, response.PeerRoutes, response.ExitNode = routeSummary(servedRoutes(client), peers)
 		if status.ManagementState.Error != nil {
 			response.Error = status.ManagementState.Error.Error()
 		} else if status.SignalState.Error != nil {
@@ -303,7 +347,7 @@ func hostname() string {
 }
 
 type httpProxy struct {
-	client *netbird.Client
+	dial dialFunc
 }
 
 func (p *httpProxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
@@ -312,7 +356,7 @@ func (p *httpProxy) ServeHTTP(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	upstream, err := p.client.DialContext(request.Context(), "tcp", request.Host)
+	upstream, err := p.dial(request.Context(), "tcp", request.Host)
 	if err != nil {
 		http.Error(writer, fmt.Sprintf("NetBird dial failed: %v", err), http.StatusBadGateway)
 		return

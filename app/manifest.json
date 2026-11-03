@@ -60,6 +60,16 @@
           "name": "InboundSocks5Port",
           "default": "1080",
           "type": "string"
+        },
+        {
+          "name": "RoutingMode",
+          "default": "off",
+          "type": "string"
+        },
+        {
+          "name": "AcceptRoutes",
+          "default": "no",
+          "type": "string"
         }
       ]
     }
