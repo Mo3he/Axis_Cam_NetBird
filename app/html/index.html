@@ -254,7 +254,7 @@
 				if (/^OK/.test(text)) return;
 				throw new Error(text || 'Save failed');
 			}
-			const response = await fetch(SETTINGS_URL, { method: 'POST', credentials: 'same-origin', body: apiBody });
+			const response = await fetch(SETTINGS_URL, { method: 'POST', credentials: 'same-origin', headers: { 'X-NetBird-Action': '1' }, body: apiBody });
 			if (!response.ok) throw new Error('Save failed');
 		}
 

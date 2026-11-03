@@ -15,6 +15,10 @@
   names work through an exit node on accounts without a nameserver group.
 - Time out proxy connections that no peer can carry after 30 seconds instead
   of waiting for TCP to give up.
+- Require an `X-NetBird-Action` header on settings changes through
+  `/local/NetBird_VPN/config/settings`, so other websites cannot change the
+  settings through an administrator's browser session.
+- Document using the outbound proxies from other camera apps.
 
 ## 0.82.0 - 2026-10-30
 

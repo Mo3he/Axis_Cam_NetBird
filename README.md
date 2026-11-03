@@ -104,12 +104,15 @@ curl --anyauth -u admin:password \
   'https://camera/local/NetBird_VPN/config/settings'
 
 curl --anyauth -u admin:password -X POST \
+  -H 'X-NetBird-Action: 1' \
   --data-urlencode 'ForwardPorts=80,443,554' \
   'https://camera/local/NetBird_VPN/config/settings'
 ```
 
-The setup key is write-only: it can be set through this endpoint but is never
-returned by it.
+Changes must include the `X-NetBird-Action` header. Requests without it get
+`403`, so other websites cannot change the settings through an administrator's
+browser session. The setup key is write-only: it can be set through this
+endpoint but is never returned by it.
 
 The page reports the management and Signal state, assigned NetBird overlay IP,
 and active proxy address. The status endpoint is available through the ACAP
@@ -149,6 +152,24 @@ and are not exposed to other LAN hosts.
 The camera operating system is not transparently routed through the overlay in
 userspace mode; applications must use a proxy or the embedded NetBird
 networking API.
+
+### Using the proxies from other camera apps
+
+Other ACAPs on the same camera can use the outbound proxies to reach NetBird
+peers, for example to send events or metadata to a collector on the NetBird
+network without exposing it publicly. Use `socks5h://` so the proxy resolves
+the host name, which also makes NetBird peer names work:
+
+```sh
+curl -x socks5h://127.0.0.1:11080 http://collector.netbird.cloud:8080/events
+curl -x http://127.0.0.1:18080 https://collector.netbird.cloud/events
+```
+
+Most HTTP libraries accept the same URLs through their proxy settings or the
+`ALL_PROXY` / `HTTPS_PROXY` environment variables. The target peer must be
+allowed by your NetBird access policies. With **Accept peer routes** enabled,
+networks behind other routing peers and an exit node are reachable the same
+way.
 
 ## Network routes and exit nodes
 

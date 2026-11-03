@@ -19,6 +19,11 @@
 /* Must be unique per ACAP: VPN apps can share a device, and a shared port would
  * make one app's reverseProxy hit another app's server. */
 #define SETTINGS_HTTP_PORT 2206
+/* Required on settings POSTs. HTML forms cannot set custom headers, and a
+ * cross-origin fetch that does needs a CORS preflight, which the camera's web
+ * server rejects, so other sites cannot change settings with an admin's
+ * session. */
+#define SETTINGS_ACTION_HEADER "X-NetBird-Action"
 
 static AXParameter *parameter_handle;
 static pid_t child_pid = -1;
@@ -310,6 +315,24 @@ static size_t settings_parse_content_length(const char *headers, size_t length) 
     return 0;
 }
 
+/* Returns the value of the named request header, or NULL if it is absent. */
+static gchar *settings_header_value(const char *headers, size_t length, const char *name) {
+    size_t name_length = strlen(name);
+    const char *line = memchr(headers, '\n', length); /* skip the request line */
+    const char *end = headers + length;
+    while (line && ++line < end) {
+        const char *line_end = memchr(line, '\n', (size_t)(end - line));
+        size_t line_length = line_end ? (size_t)(line_end - line) : (size_t)(end - line);
+        if (line_length > name_length && line[name_length] == ':' &&
+            g_ascii_strncasecmp(line, name, name_length) == 0) {
+            gchar *value = g_strndup(line + name_length + 1, line_length - name_length - 1);
+            return g_strstrip(value);
+        }
+        line = line_end;
+    }
+    return NULL;
+}
+
 static void settings_send(GOutputStream *out, const char *status, const char *content_type,
                           const char *body) {
     gchar *response = g_strdup_printf("HTTP/1.1 %s\r\n"
@@ -356,10 +379,13 @@ static gboolean settings_on_incoming(GSocketService *service G_GNUC_UNUSED,
             break; /* safety cap */
     }
 
-    gboolean is_get = FALSE, is_post = FALSE, is_settings = FALSE;
+    gboolean is_get = FALSE, is_post = FALSE, is_settings = FALSE, has_action = FALSE;
     if (have_headers) {
         is_get = g_str_has_prefix(request->str, "GET ");
         is_post = g_str_has_prefix(request->str, "POST ");
+        gchar *action = settings_header_value(request->str, header_end, SETTINGS_ACTION_HEADER);
+        has_action = action != NULL;
+        g_free(action);
         const char *space = strchr(request->str, ' ');
         if (space) {
             const char *path = space + 1;
@@ -377,6 +403,13 @@ static gboolean settings_on_incoming(GSocketService *service G_GNUC_UNUSED,
         gchar *json = settings_build_json();
         settings_send(out, "200 OK", "application/json", json);
         g_free(json);
+    } else if (is_settings && is_post && !has_action) {
+        gchar *origin = settings_header_value(request->str, header_end, "Origin");
+        syslog(LOG_WARNING, "settings http: rejected POST without %s header (origin %s)",
+               SETTINGS_ACTION_HEADER, origin ? origin : "none");
+        g_free(origin);
+        settings_send(out, "403 Forbidden", "application/json",
+                      "{\"error\":\"missing " SETTINGS_ACTION_HEADER " header\"}");
     } else if (is_settings && is_post) {
         const char *body = request->str + header_end;
         size_t body_length = request->len - header_end;
