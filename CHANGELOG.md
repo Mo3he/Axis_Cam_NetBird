@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.82.1 - 2026-11-10
 
+- Update to upstream 0.82.1.
 - Add routing peer support: the camera can serve NetBird Network Routes,
   Networks resources, and exit-node routes assigned to it in the dashboard
   (`RoutingMode`: `off`, `internet`, or `full`).

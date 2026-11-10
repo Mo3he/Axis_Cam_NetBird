@@ -3,7 +3,7 @@ module github.com/Mo3he/Axis_Cam_NetBird
 go 1.26.0
 
 require (
-	github.com/netbirdio/netbird v0.82.0
+	github.com/netbirdio/netbird v0.82.1
 	github.com/things-go/go-socks5 v0.1.3
 )
 
