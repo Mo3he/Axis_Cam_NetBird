@@ -19,7 +19,6 @@ ARG ARCH
 COPY --from=gobuilder /out/netbird /opt/app/netbird
 COPY app /opt/app/
 COPY native/param_bridge.c native/Makefile /opt/app/
-COPY LICENSE /opt/app/LICENSE
 RUN sed -i "s/\"BUILDARCH\"/\"${ARCH}\"/" /opt/app/manifest.json && \
     mkdir -p /opt/app/lib && cp /opt/app/netbird /opt/app/lib/netbird && \
     rm -f /opt/app/netbird && \
