@@ -1,19 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- Fix HTTPS over the overlay on AXIS OS 13. Its web server answers `127.0.0.1`
-  in plain HTTP on every port, 443 included, so the forwarded HTTPS port
-  returned plain HTTP. Forwarded ports now connect to `127.0.0.2`, which reaches
-  the same listeners as the network, and fall back to `127.0.0.1` for services
-  that listen only there (such as port 80 on an HTTPS-only device).
-- The inbound SOCKS5 proxy connects to `127.0.0.2` only, so services bound to
-  loopback, such as other apps' settings servers, are no longer reachable from
-  the NetBird network.
-- The inbound SOCKS5 proxy only reaches camera ports, as documented. It
-  previously connected to any address a peer asked for, including other hosts
-  on the camera's network, and also allowed UDP ASSOCIATE and BIND.
-
 ## 0.82.1 - 2026-11-10
 
 - Update to upstream 0.82.1.
