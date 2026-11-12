@@ -140,8 +140,8 @@ func main() {
 		}
 		overlayListeners = append(overlayListeners, listener)
 		forwardedPorts = append(forwardedPorts, port)
-		go forwardLoop(listener, "127.0.0.1:"+port)
-		log.Printf("forwarding overlay port %s to 127.0.0.1:%s", port, port)
+		go forwardLoop(listener, port)
+		log.Printf("forwarding overlay port %s to %s", port, net.JoinHostPort(cameraHost, port))
 	}
 
 	inboundSocksPort := os.Getenv("NB_INBOUND_SOCKS5_PORT")
@@ -241,22 +241,22 @@ func parsePorts(value, fallback string) []string {
 	return ports
 }
 
-func forwardLoop(listener net.Listener, target string) {
+func forwardLoop(listener net.Listener, port string) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			return
 		}
-		go forwardConn(conn, target)
+		go forwardConn(conn, port)
 	}
 }
 
-func forwardConn(conn net.Conn, target string) {
+func forwardConn(conn net.Conn, port string) {
 	defer conn.Close()
 
-	upstream, err := net.DialTimeout("tcp", target, 10*time.Second)
+	upstream, err := dialCamera(port)
 	if err != nil {
-		log.Printf("forward to %s: %v", target, err)
+		log.Printf("forward to camera port %s: %v", port, err)
 		return
 	}
 	defer upstream.Close()
