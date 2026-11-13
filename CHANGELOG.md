@@ -8,6 +8,16 @@
   version serves like the network (with TLS on 443), and fall back to
   `127.0.0.1` for services that listen only there (such as port 80 on an
   HTTPS-only device).
+- The inbound SOCKS5 proxy only reaches ports on the camera, as documented. It
+  used to connect to any address a peer asked for, including other devices on
+  the camera's network and the internet, which bypassed NetBird's access
+  policies for those resources. Use Routing mode to reach other devices on the
+  camera's network. It now accepts only TCP CONNECT requests.
+- The inbound SOCKS5 proxy no longer reaches services on the camera that
+  listen only on `127.0.0.1`, such as apps' settings back ends, which have no
+  login of their own. For services that listen only on IPv4 it falls back to
+  `127.0.0.2`, so every service reachable from the camera's LAN stays
+  reachable.
 
 ## 0.82.1 - 2026-11-10
 

@@ -154,7 +154,7 @@ func main() {
 	} else {
 		overlayListeners = append(overlayListeners, inboundListener)
 		inboundSocksAddress = "overlay:" + inboundSocksPort
-		inboundSocksServer := socks5.NewServer()
+		inboundSocksServer := newInboundSocksServer()
 		go func() {
 			log.Printf("inbound SOCKS5 proxy listening on overlay port %s", inboundSocksPort)
 			if err := inboundSocksServer.Serve(inboundListener); err != nil {
@@ -254,7 +254,7 @@ func forwardLoop(listener net.Listener, port string) {
 func forwardConn(conn net.Conn, port string) {
 	defer conn.Close()
 
-	upstream, err := dialCamera(port)
+	upstream, err := dialCamera(port, forwardFallback)
 	if err != nil {
 		log.Printf("forward to camera port %s: %v", port, err)
 		return
