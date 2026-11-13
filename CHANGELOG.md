@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.82.2 - 2026-11-13
 
+- Update to upstream 0.82.1.
 - Fix HTTPS over the overlay on AXIS OS 13. Its web server answers `127.0.0.1`
   in plain HTTP on every port, 443 included, so HTTPS to the camera over
   NetBird failed. Forwarded ports now connect to `[::1]`, which every AXIS OS
