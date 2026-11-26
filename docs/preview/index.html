@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" data-preview-app="netbird">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>NetBird VPN</title>
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'none'; media-src 'none'; object-src 'none'; base-uri 'none'">
+	<script src="mock.js"></script>
+	<style>
+		:root {
+			color-scheme: dark;
+			--bg: #0f1117;
+			--surface: #181b23;
+			--surface2: #1e2230;
+			--border: #262a35;
+			--text: #e4e6ed;
+			--muted: #8b8fa3;
+			--accent: #2e9cca;
+			--green: #22c55e;
+			--yellow: #f59e0b;
+			--red: #ef4444;
+			--mono: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+			font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+		[data-theme="light"] {
+			color-scheme: light;
+			--bg: #f5f6f8;
+			--surface: #fff;
+			--surface2: #f0f1f4;
+			--border: #e0e3e8;
+			--text: #1a1a2e;
+			--muted: #6b7084;
+		}
+		* { box-sizing: border-box; }
+		body { max-width: 720px; margin: 0 auto; padding: 20px; color: var(--text); background: var(--bg); line-height: 1.5; }
+		header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+		h1 { margin: 0; font-size: 18px; }
+		.theme-btn { padding: 7px; margin: 0; color: var(--muted); background: var(--surface); border: 1px solid var(--border); }
+		section { margin: 14px 0; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+		section h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 600; }
+		.row { display: flex; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+		.row:last-child { border-bottom: 0; }
+		.label { color: var(--muted); }
+		.value { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; word-break: break-word; }
+		.connected { color: var(--green); font-weight: 600; }
+		.offline { color: var(--red); font-weight: 600; }
+		label { display: block; margin: 12px 0 5px; color: var(--muted); }
+		input, select { width: 100%; box-sizing: border-box; padding: 9px; color: var(--text); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; font: inherit; }
+		.hint { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+		.route-list { white-space: pre-line; }
+		button { margin-top: 14px; padding: 9px 15px; border: 0; border-radius: 6px; color: #fff; background: var(--accent); cursor: pointer; font: inherit; }
+		#message { min-height: 1.3em; margin-top: 10px; color: var(--muted); }
+		.status-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 14px; border-radius: 8px; }
+		.status-banner.connected { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.2); }
+		.status-banner.connecting { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); }
+		.status-banner.disconnected { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); }
+		.status-dot { width: 10px; height: 10px; flex-shrink: 0; border-radius: 50%; }
+		.connected .status-dot { background: var(--green); box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+		.connecting .status-dot { background: var(--yellow); box-shadow: 0 0 0 3px rgba(245,158,11,.2); animation: pulse 1.5s infinite; }
+		.disconnected .status-dot { background: var(--red); box-shadow: 0 0 0 3px rgba(239,68,68,.2); }
+		.status-label { font-weight: 600; }
+		.connected .status-label { color: var(--green); }
+		.connecting .status-label { color: var(--yellow); }
+		.disconnected .status-label { color: var(--red); }
+		.status-time { margin-left: auto; color: var(--muted); font: 12px var(--mono); }
+		.log-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+		.log-actions { display: flex; align-items: center; gap: 10px; }
+		.log-badge, .log-toggle { color: var(--muted); font: 12px var(--mono); }
+		.log-toggle { padding: 0; margin: 0; background: none; border: 0; cursor: pointer; }
+		.log-box { max-height: 400px; overflow-y: auto; padding: 14px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; font: 11.5px/1.7 var(--mono); white-space: pre-wrap; word-break: break-all; }
+		.log-line { display: block; }
+		.log-ts { opacity: .6; }
+		.log-info { color: var(--accent); }
+		.log-warn { color: var(--yellow); }
+		.log-error { color: var(--red); }
+		.log-ok { color: var(--green); }
+		.refresh-bar { padding: 8px; color: var(--muted); text-align: center; font-size: 11px; }
+		@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+		@media (max-width: 480px) { body { padding: 14px; } .row { align-items: flex-start; flex-direction: column; gap: 2px; } .value { text-align: left; } }
+	</style>
+</head>
+<body>
+	<header>
+		<h1>NetBird VPN</h1>
+		<button class="theme-btn" id="theme-toggle" type="button" aria-label="Toggle theme">Light</button>
+	</header>
+	<div id="status-banner" class="status-banner connecting" aria-live="polite">
+		<span class="status-dot"></span>
+		<span id="status-label" class="status-label">Checking...</span>
+		<span id="status-time" class="status-time"></span>
+	</div>
+	<section aria-live="polite">
+		<h2>Connection status</h2>
+		<div class="row"><span class="label">Connection</span><span id="connected" class="value">Checking...</span></div>
+		<div class="row"><span class="label">Overlay IP</span><span id="overlay" class="value">-</span></div>
+		<div class="row"><span class="label">Management</span><span id="management" class="value">-</span></div>
+		<div class="row"><span class="label">Signal</span><span id="signal" class="value">-</span></div>
+		<div class="row"><span class="label">HTTP proxy</span><span id="proxy" class="value">-</span></div>
+		<div class="row"><span class="label">SOCKS5 proxy</span><span id="socks5" class="value">-</span></div>
+		<div class="row"><span class="label">Forwarded ports</span><span id="forward-ports" class="value">-</span></div>
+		<div class="row"><span class="label">Inbound SOCKS5</span><span id="inbound-socks5" class="value">-</span></div>
+		<div id="message"></div>
+	</section>
+	<section aria-live="polite">
+		<h2>Routing</h2>
+		<div class="row"><span class="label">Routing peer</span><span id="routing-mode" class="value">-</span></div>
+		<div class="row"><span class="label">Served routes</span><span id="served-routes" class="value route-list">-</span></div>
+		<div class="row"><span class="label">Accept peer routes</span><span id="accept-routes" class="value">-</span></div>
+		<div class="row"><span class="label">Exit node in use</span><span id="exit-node" class="value">-</span></div>
+		<div class="row"><span class="label">Routes via peers</span><span id="peer-routes" class="value route-list">-</span></div>
+	</section>
+	<section>
+		<h2>Settings</h2>
+		<label for="management-url">Management URL</label>
+		<input id="management-url" autocomplete="url">
+		<label for="setup-key">Setup key</label>
+		<input id="setup-key" type="password" autocomplete="off">
+		<label for="proxy-port">HTTP proxy port</label>
+		<input id="proxy-port" inputmode="numeric">
+		<label for="socks5-port">SOCKS5 proxy port</label>
+		<input id="socks5-port" inputmode="numeric">
+		<label for="forward-ports-input">Forwarded camera ports</label>
+		<input id="forward-ports-input" inputmode="numeric">
+		<label for="inbound-socks5-port">Inbound SOCKS5 port</label>
+		<input id="inbound-socks5-port" inputmode="numeric">
+		<label for="routing-mode-input">Routing peer</label>
+		<select id="routing-mode-input">
+			<option value="off">Off</option>
+			<option value="internet">On, except the camera's own subnets</option>
+			<option value="full">On, including the camera's own subnets</option>
+		</select>
+		<p class="hint">Serve the Network Routes, Networks resources or exit node assigned to this camera in the NetBird dashboard.</p>
+		<label for="accept-routes-input">Accept peer routes and exit nodes</label>
+		<select id="accept-routes-input">
+			<option value="no">No</option>
+			<option value="yes">Yes</option>
+		</select>
+		<p class="hint">Let the camera's outbound proxies reach networks behind other routing peers and use an exit node.</p>
+		<button id="save">Save and reconnect</button>
+	</section>
+	<section>
+		<div class="log-controls">
+			<h2>Service log</h2>
+			<div class="log-actions"><span id="log-count" class="log-badge"></span><button id="log-bottom" class="log-toggle" type="button">Scroll to bottom</button></div>
+		</div>
+		<div id="log-box" class="log-box">Loading logs...</div>
+	</section>
+	<div class="refresh-bar">Auto-refresh every 5 seconds</div>
+	<script>
+		const group = 'root.NetBird_VPN.';
+		const PARAM_URL = '/axis-cgi/param.cgi';
+		// Fallback for devices without param.cgi (recorders, access control).
+		const SETTINGS_URL = '/local/NetBird_VPN/config/settings';
+		const PARAM_NAMES = ['ManagementURL', 'HTTPProxyPort', 'Socks5Port', 'ForwardPorts', 'InboundSocks5Port', 'RoutingMode', 'AcceptRoutes'];
+		const ROUTING_LABELS = { off: 'Off', internet: 'On, except own subnets', full: 'On, including own subnets' };
+		const byId = id => document.getElementById(id);
+		const root = document.documentElement;
+		const themeToggle = byId('theme-toggle');
+		function applyTheme(theme) {
+			if (theme === 'light') root.setAttribute('data-theme', 'light');
+			else root.removeAttribute('data-theme');
+			themeToggle.textContent = theme === 'light' ? 'Dark' : 'Light';
+		}
+		const savedTheme = localStorage.getItem('netbird-theme');
+		applyTheme(savedTheme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+		themeToggle.addEventListener('click', () => {
+			const next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+			localStorage.setItem('netbird-theme', next);
+			applyTheme(next);
+		});
+
+		let autoScrollLogs = true;
+		const logBox = byId('log-box');
+		logBox.addEventListener('scroll', () => {
+			autoScrollLogs = logBox.scrollHeight - logBox.scrollTop - logBox.clientHeight < 40;
+		});
+		byId('log-bottom').addEventListener('click', () => {
+			logBox.scrollTop = logBox.scrollHeight;
+			autoScrollLogs = true;
+		});
+		function escapeHTML(value) {
+			return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		}
+		function logClass(line) {
+			if (/error|fail|panic|fatal/i.test(line)) return 'log-error';
+			if (/warn|timeout|retry/i.test(line)) return 'log-warn';
+			if (/connected|success|cleared|listening/i.test(line)) return 'log-ok';
+			if (/starting|connecting|management|signal/i.test(line)) return 'log-info';
+			return '';
+		}
+		function renderLogs(text) {
+			const lines = text.split('\n').filter(line => line.trim());
+			byId('log-count').textContent = lines.length + ' lines';
+			logBox.innerHTML = lines.map(line => {
+				const match = line.match(/^(\S+\s+\d+\s+[\d:]+)\s+(.*)$/);
+				if (!match) return '<span class="log-line ' + logClass(line) + '">' + escapeHTML(line) + '</span>';
+				return '<span class="log-line"><span class="log-ts">' + escapeHTML(match[1]) + '</span> <span class="' + logClass(match[2]) + '">' + escapeHTML(match[2]) + '</span></span>';
+			}).join('\n');
+			if (autoScrollLogs) logBox.scrollTop = logBox.scrollHeight;
+		}
+		function loadLogs() {
+			return fetch('/axis-cgi/admin/systemlog.cgi?appname=NetBird_VPN', { cache: 'no-store' })
+				.then(response => response.text()).then(renderLogs).catch(() => { logBox.textContent = 'Unable to load service logs.'; });
+		}
+
+		// _any tells real param.cgi output apart from a generic 404/error page.
+		function parseParamText(text) {
+			const params = { _any: false };
+			for (const line of text.split('\n')) {
+				const separator = line.indexOf('=');
+				if (separator < 0) continue;
+				const name = line.slice(0, separator);
+				if (!name.startsWith(group)) continue;
+				const short = name.slice(group.length);
+				if (!PARAM_NAMES.includes(short)) continue;
+				params[short] = line.slice(separator + 1).trim();
+				params._any = true;
+			}
+			return params;
+		}
+
+		async function getParams() {
+			try {
+				const response = await fetch(PARAM_URL + '?action=list&group=root.NetBird_VPN', { cache: 'no-store', credentials: 'same-origin' });
+				if (!response.ok) throw new Error('param.cgi unavailable');
+				const params = parseParamText(await response.text());
+				if (!params._any) throw new Error('param.cgi returned no parameters');
+				return params;
+			} catch (error) {
+				try {
+					const response = await fetch(SETTINGS_URL + '?t=' + Date.now(), { cache: 'no-store', credentials: 'same-origin' });
+					return response.ok ? await response.json() : {};
+				} catch (fallbackError) {
+					return {};
+				}
+			}
+		}
+
+		// Fall back only if param.cgi fails at the HTTP level, so its own rejections surface.
+		async function saveParams(values) {
+			const cgiBody = new URLSearchParams({ action: 'update' });
+			const apiBody = new URLSearchParams();
+			for (const [name, value] of Object.entries(values)) {
+				cgiBody.set(group + name, value);
+				apiBody.set(name, value);
+			}
+			let cgiResponse = null;
+			try {
+				const response = await fetch(PARAM_URL, { method: 'POST', credentials: 'same-origin', body: cgiBody });
+				if (response.ok) cgiResponse = response;
+			} catch (error) {
+				cgiResponse = null;
+			}
+			if (cgiResponse) {
+				const text = (await cgiResponse.text()).trim();
+				if (/^OK/.test(text)) return;
+				throw new Error(text || 'Save failed');
+			}
+			const response = await fetch(SETTINGS_URL, { method: 'POST', credentials: 'same-origin', headers: { 'X-NetBird-Action': '1' }, body: apiBody });
+			if (!response.ok) throw new Error('Save failed');
+		}
+
+		async function loadSettings() {
+			const params = await getParams();
+			if (typeof params.ManagementURL === 'string') byId('management-url').value = params.ManagementURL;
+			if (typeof params.HTTPProxyPort === 'string') byId('proxy-port').value = params.HTTPProxyPort;
+			if (typeof params.Socks5Port === 'string') byId('socks5-port').value = params.Socks5Port;
+			if (typeof params.ForwardPorts === 'string') byId('forward-ports-input').value = params.ForwardPorts;
+			if (typeof params.InboundSocks5Port === 'string') byId('inbound-socks5-port').value = params.InboundSocks5Port;
+			if (typeof params.RoutingMode === 'string') byId('routing-mode-input').value = ROUTING_LABELS[params.RoutingMode.trim().toLowerCase()] ? params.RoutingMode.trim().toLowerCase() : 'off';
+			if (typeof params.AcceptRoutes === 'string') byId('accept-routes-input').value = /^(yes|true|1|on)$/i.test(params.AcceptRoutes.trim()) ? 'yes' : 'no';
+		}
+
+		// The daemon serving this doesn't run until a setup key is enrolled, so a
+		// non-JSON reply (proxy error page) means "not running".
+		async function loadStatus() {
+			let status = null;
+			try {
+				const response = await fetch('api/status', { cache: 'no-store' });
+				const text = await response.text();
+				try {
+					status = JSON.parse(text);
+				} catch (parseError) {
+					status = null;
+				}
+			} catch (error) {
+				status = null;
+			}
+
+			byId('status-time').textContent = new Date().toLocaleTimeString();
+
+			if (!status) {
+				byId('status-banner').className = 'status-banner disconnected';
+				byId('status-label').textContent = 'Not running';
+				byId('connected').textContent = 'Not running';
+				byId('connected').className = 'value offline';
+				for (const id of ['overlay', 'management', 'signal', 'proxy', 'socks5', 'forward-ports', 'inbound-socks5', 'routing-mode', 'served-routes', 'accept-routes', 'exit-node', 'peer-routes']) byId(id).textContent = '-';
+				byId('message').textContent = 'Enter a setup key below and save to connect.';
+				return;
+			}
+
+			const connected = byId('connected');
+			const state = status.connected ? 'connected' : (status.management_connected || status.signal_connected ? 'connecting' : 'disconnected');
+			byId('status-banner').className = 'status-banner ' + state;
+			byId('status-label').textContent = state === 'connected' ? 'Connected' : (state === 'connecting' ? 'Connecting...' : 'Stopped');
+			connected.textContent = status.connected ? 'Connected' : 'Disconnected';
+			connected.className = 'value ' + (status.connected ? 'connected' : 'offline');
+			byId('overlay').textContent = status.overlay_ip || '-';
+			byId('management').textContent = status.management_connected ? 'Connected' : 'Disconnected';
+			byId('signal').textContent = status.signal_connected ? 'Connected' : 'Disconnected';
+			byId('proxy').textContent = status.proxy_address || '-';
+			byId('socks5').textContent = status.socks5_address || '-';
+			const overlayIP = (status.overlay_ip || '').split('/')[0];
+			const ports = status.forward_ports || [];
+			byId('forward-ports').textContent = ports.length ? (overlayIP ? ports.map(port => overlayIP + ':' + port).join(', ') : ports.join(', ')) : '-';
+			byId('inbound-socks5').textContent = status.inbound_socks5_address ? status.inbound_socks5_address.replace('overlay', overlayIP || 'overlay') : '-';
+			byId('message').textContent = status.error || '';
+
+			const servedRoutes = status.served_routes || [];
+			const peerRoutes = status.peer_routes || [];
+			byId('routing-mode').textContent = ROUTING_LABELS[status.routing_mode] || 'Off';
+			byId('served-routes').textContent = status.routing_mode && status.routing_mode !== 'off' ? (servedRoutes.length ? servedRoutes.join('\n') : 'None assigned') : '-';
+			byId('accept-routes').textContent = status.accept_routes ? 'Yes' : 'No';
+			byId('exit-node').textContent = status.exit_node || (status.accept_routes ? 'None' : '-');
+			byId('peer-routes').textContent = status.accept_routes ? (peerRoutes.length ? peerRoutes.map(route => route.network + ' via ' + route.peer).join('\n') : 'None') : '-';
+		}
+
+		byId('save').addEventListener('click', async () => {
+			const values = {
+				ManagementURL: byId('management-url').value,
+				HTTPProxyPort: byId('proxy-port').value,
+				Socks5Port: byId('socks5-port').value,
+				ForwardPorts: byId('forward-ports-input').value,
+				InboundSocks5Port: byId('inbound-socks5-port').value,
+				RoutingMode: byId('routing-mode-input').value,
+				AcceptRoutes: byId('accept-routes-input').value
+			};
+			if (byId('setup-key').value) values.SetupKey = byId('setup-key').value;
+			byId('message').textContent = 'Saving...';
+			try {
+				await saveParams(values);
+				byId('setup-key').value = '';
+				byId('message').textContent = 'Saved. Reconnecting...';
+				setTimeout(loadStatus, 1000);
+			} catch (error) {
+				byId('message').textContent = error.message;
+			}
+		});
+
+		loadSettings();
+		loadStatus();
+		loadLogs();
+		setInterval(() => { loadStatus(); loadLogs(); }, 5000);
+	</script>
+</body>
+</html>
