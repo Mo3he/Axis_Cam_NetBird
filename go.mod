@@ -3,13 +3,14 @@ module github.com/Mo3he/Axis_Cam_NetBird
 go 1.26.0
 
 require (
-	github.com/netbirdio/netbird v0.83.2
+	github.com/netbirdio/netbird v0.84.0
 	github.com/things-go/go-socks5 v0.1.4
 )
 
 require (
 	cunicu.li/go-rosenpass v0.5.42 // indirect
 	github.com/DeRuina/timberjack v1.4.2 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/anmitsu/go-shlex v0.0.0-20200514113438-38f4b401e2be // indirect
 	github.com/aws/aws-sdk-go-v2 v1.38.3 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.31.6 // indirect
@@ -36,6 +37,7 @@ require (
 	github.com/coreos/go-iptables v0.7.0 // indirect
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
+	github.com/flynn/noise v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gliderlabs/ssh v0.3.9-0.20250127223818-909fa952d4e4 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -55,7 +57,9 @@ require (
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
+	github.com/jezek/xgb v1.3.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/kirides/go-d3d v1.0.1 // indirect
 	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/koron/go-ssdp v0.0.4 // indirect

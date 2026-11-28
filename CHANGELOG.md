@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.84.0 - 2026-11-28
+
+- Update to upstream 0.84.0.
+
 ## 0.83.2 - 2026-11-21
 
 - Update to upstream 0.83.2.
